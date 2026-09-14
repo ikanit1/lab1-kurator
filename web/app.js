@@ -701,29 +701,32 @@
   // =====================================================================
   // Станция 04 -- одиночный нейрон
   // =====================================================================
-  var s4hist = [];
+  var s4 = { seed: 0, net: null, hist: [], loss: 0 };
 
   function runS4() {
     var ds = DS.circles;
-    var n = new E.Neuron({ nInputs: 2, activation: "sigmoid", loss: "bce", seed: 0 });
-    s4hist = [];
+    var n = new E.Neuron({ nInputs: 2, activation: "sigmoid", loss: "bce", seed: s4.seed });
+    s4.hist = [];
     for (var e = 0; e < 3000; e++) {
-      if (e % 15 === 0) s4hist.push([e, n.loss(ds.points, ds.labels)]);
+      if (e % 15 === 0) s4.hist.push([e, n.loss(ds.points, ds.labels)]);
       n.step(ds.points, ds.labels, 0.5);
     }
-    var finalLoss = n.loss(ds.points, ds.labels);
-    s4hist.push([3000, finalLoss]);
-    drawS4(n, ds, finalLoss);
+    s4.loss = n.loss(ds.points, ds.labels);
+    s4.hist.push([3000, s4.loss]);
+    s4.net = n;
+    drawS4();
   }
 
-  function drawS4(model, ds, finalLoss) {
+  function drawS4() {
+    if (!s4.net) return;
+    var ds = DS.circles;
     fitCanvas($("s4-canvas"));
-    renderBoundary($("s4-canvas"), model, ds);
+    renderBoundary($("s4-canvas"), s4.net, ds);
     $("s4-scale").style.background = scaleGradient();
 
     lineChart($("s4-chart"), {
       height: 220,
-      series: [{ name: "BCE", color: P.c0, points: s4hist, width: 2 }],
+      series: [{ name: "BCE", color: P.c0, points: s4.hist, width: 2 }],
       xDomain: [0, 3000],
       yDomain: [0.5, 0.8],
       xLabel: "эпоха",
@@ -734,12 +737,19 @@
     });
 
     $("s4-kv").innerHTML =
-      kv("потери в конце", finalLoss.toFixed(6)) +
+      kv("инициализация", "seed " + s4.seed) +
+      kv("потери в конце", s4.loss.toFixed(6)) +
       kv("ln 2", Math.LN2.toFixed(6)) +
-      kv("точность", pct(model.accuracy(ds.points, ds.labels))) +
+      kv("точность", pct(s4.net.accuracy(ds.points, ds.labels))) +
       kv("эпох", "3000, η = 0.5");
   }
-  $("s4-run").addEventListener("click", runS4);
+
+  // Каждое нажатие -- новое начальное приближение. Результат один и тот же,
+  // и это как раз то, что нужно показать: дело не в неудачном старте.
+  $("s4-run").addEventListener("click", function () {
+    s4.seed = (s4.seed + 1) % 12;
+    runS4();
+  });
 
   // =====================================================================
   // Станция 05 -- сеть со скрытым слоем
@@ -925,12 +935,16 @@
   // =====================================================================
   var LRS = [0.001, 0.01, 0.1, 1];
   var s7runs = [];
+  var s7conf = { H: 8, act: "tanh", ds: "circles" };
 
   function runS7() {
-    var ds = DS.circles;
+    // Конфигурация берётся со станции 05: кнопка «Пересчитать» прогоняет
+    // выбранные там набор данных, активацию и ширину скрытого слоя.
+    var ds = DS[s5.ds];
+    s7conf = { H: s5.H, act: s5.act, ds: s5.ds };
     s7runs = LRS.map(function (lr, i) {
       var net = new E.MLP({
-        nInputs: 2, nHidden: 8, hiddenActivation: "tanh",
+        nInputs: 2, nHidden: s7conf.H, hiddenActivation: s7conf.act,
         outputActivation: "sigmoid", loss: "bce", seed: 3
       });
       var pts = [];
@@ -978,6 +992,10 @@
       return { name: "η = " + r.lr, color: r.color };
     }));
 
+    $("s7-cap").textContent = "2000 эпох · набор " + DS[s7conf.ds].title +
+      " · сеть 2-" + s7conf.H + "-1 · скрытый слой " +
+      E.ACTIVATIONS[s7conf.act].label;
+
     $("s7-table").innerHTML = s7runs.map(function (r) {
       return "<tr><td>" + r.lr + "</td><td>" + r.last.toFixed(6) + "</td><td>" +
         pct(r.acc) + "</td><td>" + (r.reached >= 0 ? r.reached : "—") + "</td></tr>";
@@ -1021,12 +1039,7 @@
     drawS1();
     drawS2();
     drawS3();
-    if (s4hist.length) {
-      var ds = DS.circles;
-      var n = new E.Neuron({ nInputs: 2, activation: "sigmoid", loss: "bce", seed: 0 });
-      for (var e = 0; e < 3000; e++) n.step(ds.points, ds.labels, 0.5);
-      drawS4(n, ds, n.loss(ds.points, ds.labels));
-    }
+    drawS4();
     drawS5();
     if (s7runs.length) drawS7();
   }
