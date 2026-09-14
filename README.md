@@ -35,13 +35,16 @@ lab1-kurator/
 │   ├── task7_learning_rate.py    пункт 7
 │   ├── run_variant.py            индивидуальный вариант
 │   └── run_all.py                все пункты подряд
-├── web/                          веб-интерфейс для демонстрации
+├── web/                          исходники веб-интерфейса
 │   ├── artifact.html             страница: разметка, стили
 │   ├── engine.js                 порт neuron/ на JavaScript
 │   ├── app.js                    графики, карта решений, семь станций
 │   ├── data.js                   наборы данных и эталон NumPy (генерируется)
 │   ├── export_data.py            выгрузка данных и эталона из NumPy
-│   └── server.py                 локальный запуск без зависимостей
+│   ├── build.py                  сборка статического сайта в public/
+│   └── server.py                 локальный просмотр собранного сайта
+├── public/                       готовый статический сайт (собирается build.py)
+├── vercel.json                   конфигурация развёртывания
 ├── notebooks/lab1_neuron.ipynb   отчёт в Jupyter (выполнен, с выводом и графиками)
 ├── tests/test_lab1.py            28 автотестов
 └── figures/                      сохранённые графики
@@ -59,7 +62,8 @@ python -m tasks.run_variant -n 7         # свой вариант (номер �
 python -m unittest discover -s tests -v  # автотесты
 jupyter notebook notebooks/lab1_neuron.ipynb
 
-python web/server.py --open              # веб-интерфейс, http://127.0.0.1:8000
+python web/build.py                      # собрать сайт в public/
+python web/server.py --open              # посмотреть локально, http://127.0.0.1:8000
 ```
 
 Требуется Python 3.10+, NumPy, Matplotlib, scikit-learn (только для генерации данных).
@@ -383,7 +387,8 @@ loss           = LOSSES[(N - 1) % 2]            # mse / bce
 пунктам хода работы, но вместо статических картинок даёт живые графики.
 
 ```bash
-python web/server.py --open      # локально, без интернета и без зависимостей
+python web/build.py              # собрать статический сайт в public/
+python web/server.py --open      # посмотреть локально, без интернета
 ```
 
 Семь станций страницы повторяют ход работы:
@@ -402,6 +407,43 @@ python web/server.py --open      # локально, без интернета �
 активация скрытого слоя, ширина слоя `H`, скорость обучения и номер инициализации —
 в том числе чтобы показать, как при `H = 2` часть запусков застревает в локальном
 минимуме.
+
+### Развёртывание на Vercel
+
+Сайт статический: ни сборщиков, ни серверного кода, ни переменных окружения.
+Готовая сборка лежит в `public/` и закоммичена, поэтому Vercel ничего не собирает —
+просто раздаёт файлы. Настройки заданы в `vercel.json`:
+
+```json
+{ "buildCommand": "", "outputDirectory": "public", "cleanUrls": true }
+```
+
+**Через веб-интерфейс Vercel** (проще всего):
+
+1. <https://vercel.com/new> → **Import Git Repository** → выбрать `lab1-kurator`;
+2. Framework Preset — **Other**, Root Directory — корень репозитория;
+3. **Deploy**. Настройки из `vercel.json` подхватятся автоматически, ничего
+   вводить вручную не нужно.
+
+**Через CLI:**
+
+```bash
+npm i -g vercel
+vercel            # черновое развёртывание с временным адресом
+vercel --prod     # боевое
+```
+
+После развёртывания каждый `git push` в ветку автоматически выкатывает новую
+версию. Если репозиторий приватный, откройте доступ к развёрнутому сайту
+в настройках проекта: **Settings → Deployment Protection**.
+
+> **После правок в `web/` обязательно выполните `python web/build.py`** и
+> закоммитьте `public/` — Vercel отдаёт именно его. Забыть об этом сложно:
+> автотест `TestWebBuild.test_public_is_up_to_date` сверяет `public/` со свежей
+> сборкой и падает при расхождении.
+
+Каталог `public/` не привязан к Vercel и так же разворачивается на GitHub Pages,
+Netlify, Cloudflare Pages или любом статическом хостинге.
 
 ### Почему это не «вторая реализация»
 

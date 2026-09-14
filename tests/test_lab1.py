@@ -4,8 +4,12 @@
    либо:  python -m pytest tests -q
 """
 
+import filecmp
+import importlib.util
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 
 import numpy as np
@@ -248,6 +252,53 @@ class TestVariants(unittest.TestCase):
     def test_invalid_variant_raises(self):
         with self.assertRaises(ValueError):
             get_variant(0)
+
+
+class TestWebBuild(unittest.TestCase):
+    """Собранный public/ должен совпадать со свежей сборкой из web/."""
+
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    def _build_module(self):
+        path = os.path.join(self.ROOT, "web", "build.py")
+        spec = importlib.util.spec_from_file_location("lab_web_build", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def test_public_is_up_to_date(self):
+        public = os.path.join(self.ROOT, "public")
+        if not os.path.isdir(public):
+            self.skipTest("public/ не собран: запустите python web/build.py")
+        build = self._build_module()
+        tmp = tempfile.mkdtemp()
+        try:
+            build.build(tmp)
+            names = sorted(os.listdir(tmp))
+            match, mismatch, errors = filecmp.cmpfiles(tmp, public, names, shallow=False)
+            self.assertEqual(
+                (mismatch, errors), ([], []),
+                "public/ отстал от web/ -- выполните: python web/build.py",
+            )
+            self.assertEqual(sorted(match), names)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_document_is_complete(self):
+        index = os.path.join(self.ROOT, "public", "index.html")
+        if not os.path.exists(index):
+            self.skipTest("public/index.html не собран")
+        with open(index, encoding="utf-8") as f:
+            html = f.read()
+        head = html.split("</head>", 1)[0]
+        for token in ("<!doctype html>", '<html lang="ru">', "<title>", "favicon.svg"):
+            self.assertIn(token, html, token)
+        # Всё, чему место в <head>, должно оказаться именно там.
+        self.assertIn("<title>", head)
+        self.assertIn("<style>", head)
+        for asset in ("data.js", "engine.js", "app.js"):
+            self.assertIn('src="' + asset + '"', html)
+            self.assertTrue(os.path.exists(os.path.join(self.ROOT, "public", asset)))
 
 
 if __name__ == "__main__":

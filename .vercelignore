@@ -1,0 +1,9 @@
+# Для сайта нужен только каталог public/ -- остальное не загружаем.
+.git
+__pycache__/
+*.py[cod]
+figures/
+notebooks/
+tests/
+tasks/
+neuron/
