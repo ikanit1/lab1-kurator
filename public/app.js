@@ -473,6 +473,50 @@
     }
   }
 
+  /** Только точки выборки: показывает саму задачу, без решения. */
+  function renderScatter(canvas, ds) {
+    var ctx = canvas.getContext("2d");
+    var w = canvas.width;
+    var h = canvas.height;
+    var d = domainOf(ds);
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = P.panel;
+    ctx.fillRect(0, 0, w, h);
+
+    var tx = function (x) { return ((x - d[0]) / (d[1] - d[0])) * w; };
+    var ty = function (y) { return h - ((y - d[2]) / (d[3] - d[2])) * h; };
+
+    // Оси через начало координат -- только чтобы задать масштаб взгляду.
+    ctx.strokeStyle = P.line;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(tx(0), 0); ctx.lineTo(tx(0), h);
+    ctx.moveTo(0, ty(0)); ctx.lineTo(w, ty(0));
+    ctx.stroke();
+
+    var R = ds.n > 300 ? 4.4 : 6;
+    for (var k = 0; k < ds.n; k++) {
+      var X = tx(ds.points[k][0]);
+      var Y = ty(ds.points[k][1]);
+      var cls = ds.labels[k] > 0.5 ? 1 : 0;
+      ctx.beginPath();
+      if (cls === 0) {
+        ctx.arc(X, Y, R, 0, Math.PI * 2);
+      } else {
+        ctx.moveTo(X, Y - R * 1.12);
+        ctx.lineTo(X + R, Y + R * 0.78);
+        ctx.lineTo(X - R, Y + R * 0.78);
+        ctx.closePath();
+      }
+      ctx.fillStyle = cls === 0 ? P.c0 : P.c1;
+      ctx.fill();
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = P.panel;
+      ctx.stroke();
+    }
+  }
+
   function fitCanvas(canvas) {
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     var size = Math.round(canvas.clientWidth * dpr);
@@ -961,8 +1005,19 @@
   // =====================================================================
   // Запуск и реакция на смену темы
   // =====================================================================
+  function drawOverview() {
+    fitCanvas($("ov-canvas"));
+    renderScatter($("ov-canvas"), DS.circles);
+    var ref = new E.MLP({
+      nInputs: 2, nHidden: 8, hiddenActivation: "tanh",
+      outputActivation: "sigmoid", loss: "bce", seed: 0
+    });
+    $("ov-params").textContent = String(ref.getParams().length);
+  }
+
   function redrawAll() {
     P = palette();
+    drawOverview();
     drawS1();
     drawS2();
     drawS3();
@@ -978,6 +1033,7 @@
 
   function boot() {
     verify();
+    drawOverview();
     drawS1();
     drawS2();
     drawS3();
@@ -1012,6 +1068,7 @@
   window.addEventListener("resize", function () {
     clearTimeout(rt);
     rt = setTimeout(function () {
+      fitCanvas($("ov-canvas"));
       fitCanvas($("s4-canvas"));
       fitCanvas($("s5-canvas"));
       redrawAll();
