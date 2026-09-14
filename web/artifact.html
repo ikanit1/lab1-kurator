@@ -1,0 +1,805 @@
+<title>Нейрон на NumPy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap">
+
+<style>
+/* ---------------------------------------------------------------- токены */
+:root {
+  --is-dark: 0;
+  --bg: #F2F5F4;
+  --panel: #FFFFFF;
+  --panel-2: #E9EEEC;
+  --ink: #0F1917;
+  --ink-2: #445350;
+  --ink-3: #6F807C;
+  --line: #D3DCD9;
+  --line-strong: #B4C3BF;
+  --c0: #00968A;
+  --c1: #CC5F00;
+  --c0-soft: rgba(0, 150, 138, 0.13);
+  --c1-soft: rgba(204, 95, 0, 0.13);
+  --pass: #2F6B3A;
+  --fail: #B23225;
+  --pass-soft: rgba(47, 107, 58, 0.12);
+  --fail-soft: rgba(178, 50, 37, 0.12);
+  --btn-ink: #FFFFFF;
+  --shadow: 0 1px 2px rgba(15, 25, 23, .05), 0 8px 24px -16px rgba(15, 25, 23, .28);
+
+  --sans: "IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --serif: "IBM Plex Serif", ui-serif, Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --is-dark: 1;
+    --bg: #0D1413;
+    --panel: #141D1B;
+    --panel-2: #1C2725;
+    --ink: #E9F1EF;
+    --ink-2: #A7B7B3;
+    --ink-3: #7B8C88;
+    --line: #273432;
+    --line-strong: #3A4B48;
+    --c0: #17A899;
+    --c1: #D97528;
+    --c0-soft: rgba(23, 168, 153, 0.16);
+    --c1-soft: rgba(217, 117, 40, 0.16);
+    --pass: #5FB36F;
+    --fail: #E0705F;
+    --pass-soft: rgba(95, 179, 111, 0.14);
+    --fail-soft: rgba(224, 112, 95, 0.14);
+    --btn-ink: #06100F;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .7);
+  }
+}
+:root[data-theme="dark"] {
+  --is-dark: 1;
+  --bg: #0D1413;
+  --panel: #141D1B;
+  --panel-2: #1C2725;
+  --ink: #E9F1EF;
+  --ink-2: #A7B7B3;
+  --ink-3: #7B8C88;
+  --line: #273432;
+  --line-strong: #3A4B48;
+  --c0: #17A899;
+  --c1: #D97528;
+  --c0-soft: rgba(23, 168, 153, 0.16);
+  --c1-soft: rgba(217, 117, 40, 0.16);
+  --pass: #5FB36F;
+  --fail: #E0705F;
+  --pass-soft: rgba(95, 179, 111, 0.14);
+  --fail-soft: rgba(224, 112, 95, 0.14);
+  --btn-ink: #06100F;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -16px rgba(0, 0, 0, .7);
+}
+
+/* ------------------------------------------------------------- основа */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-inline: 20px;
+  padding-block: 0 64px;
+}
+
+h1, h2, h3 { font-family: var(--serif); font-weight: 600; text-wrap: balance; margin: 0; }
+
+a { color: var(--c0); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+:where(button, input, select, a):focus-visible {
+  outline: 2px solid var(--c0);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* -------------------------------------------------------------- шапка */
+.masthead {
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.masthead__inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-inline: 20px;
+  padding-block: 26px 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.masthead__eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 6px;
+}
+.masthead h1 { font-size: clamp(26px, 4.4vw, 38px); line-height: 1.1; letter-spacing: -.01em; }
+.masthead__sub { margin: 8px 0 0; color: var(--ink-2); max-width: 54ch; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.chip {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 4px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  color: var(--ink-2);
+  background: var(--bg);
+  white-space: nowrap;
+}
+.chip b { color: var(--ink); font-weight: 600; }
+
+/* сводка результатов в шапке */
+.readout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(112px, auto));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.readout__cell { background: var(--panel); padding: 10px 14px; }
+.readout__k {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  display: block;
+  margin-bottom: 3px;
+}
+.readout__v { font-family: var(--mono); font-size: 17px; font-weight: 500; letter-spacing: -.01em; }
+
+/* -------------------------------------------------------------- станции */
+.station { padding-block: 40px; border-bottom: 1px solid var(--line); }
+.station:last-of-type { border-bottom: 0; }
+
+.station__head { display: flex; gap: 14px; align-items: baseline; }
+.station__num {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c0);
+  border: 1px solid var(--c0);
+  border-radius: 2px;
+  padding: 1px 6px;
+  flex: none;
+  line-height: 1.5;
+}
+.station h2 { font-size: clamp(19px, 2.6vw, 24px); letter-spacing: -.005em; }
+.station__lede { margin: 10px 0 0; color: var(--ink-2); max-width: 68ch; }
+.station__body { margin-top: 22px; display: grid; gap: 18px; }
+.cols { grid-template-columns: minmax(0, 320px) minmax(0, 1fr); align-items: start; }
+.cols-wide { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+.board-split {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  align-items: start;
+}
+
+/* ---------------------------------------------------------------- панели */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 16px;
+}
+.panel--plain { background: transparent; border: 0; padding: 0; }
+.panel__title {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin: 0 0 12px;
+}
+
+/* -------------------------------------------------------------- контролы */
+.ctrl { display: grid; gap: 5px; margin-bottom: 14px; }
+.ctrl:last-child { margin-bottom: 0; }
+.ctrl__row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.ctrl__label { font-size: 13px; color: var(--ink-2); }
+.ctrl__value { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+
+input[type="range"] {
+  width: 100%;
+  margin: 0;
+  accent-color: var(--c0);
+  height: 20px;
+}
+
+.segmented { display: flex; flex-wrap: wrap; gap: 4px; }
+.segmented button {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--ink-2);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.segmented button:hover { border-color: var(--c0); color: var(--ink); }
+.segmented button[aria-pressed="true"] {
+  background: var(--c0);
+  border-color: var(--c0);
+  color: var(--panel);
+  font-weight: 500;
+}
+
+.btn {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 3px;
+  border: 1px solid var(--c0);
+  background: var(--c0);
+  color: var(--btn-ink);
+  cursor: pointer;
+  transition: filter .12s;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn--ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+.btn--ghost:hover { border-color: var(--c0); filter: none; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ------------------------------------------------------------- формулы */
+.formula {
+  font-family: var(--mono);
+  font-size: 13.5px;
+  background: var(--panel-2);
+  border-left: 2px solid var(--c0);
+  padding: 11px 14px;
+  border-radius: 0 3px 3px 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.formula .dim { color: var(--ink-3); }
+
+.trace { display: grid; gap: 7px; font-family: var(--mono); font-size: 13px; }
+.trace__row { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
+.trace__row span:first-child { color: var(--ink-3); }
+.trace__row b { font-weight: 500; }
+.trace__row--total { border-top: 1px solid var(--line); padding-top: 8px; font-size: 15px; }
+
+/* -------------------------------------------------------------- графики */
+.figure { display: grid; gap: 8px; }
+.figure__cap {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--ink-2); }
+.legend__item { display: inline-flex; align-items: center; gap: 6px; }
+.legend__swatch { width: 15px; height: 3px; border-radius: 2px; flex: none; }
+.legend__swatch--dash {
+  height: 0;
+  border-top: 3px dashed currentColor;
+  width: 15px;
+}
+
+.tip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 7px 9px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .1s;
+  z-index: 5;
+  color: var(--ink);
+}
+.tip[data-show="1"] { opacity: 1; }
+.tip__k { color: var(--ink-3); }
+
+/* ------------------------------------------------- карта решений (canvas) */
+.board { display: grid; gap: 8px; max-width: 420px; }
+.board__canvas {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  max-width: 100%;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--panel-2);
+}
+.scale {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.scale__bar { height: 8px; border-radius: 2px; border: 1px solid var(--line); }
+
+/* --------------------------------------------------------------- таблицы */
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td {
+  text-align: right;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+th {
+  font-size: 10.5px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 500;
+  border-bottom: 1px solid var(--line-strong);
+}
+td:first-child, th:first-child { text-align: left; }
+tbody tr:last-child td { border-bottom: 0; }
+
+/* ---------------------------------------------------------------- вердикт */
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+.verdict--pass { color: var(--pass); background: var(--pass-soft); border-color: var(--pass); }
+.verdict--fail { color: var(--fail); background: var(--fail-soft); border-color: var(--fail); }
+.verdict__icon { font-weight: 700; }
+
+.note {
+  font-size: 13px;
+  color: var(--ink-2);
+  border-left: 2px solid var(--line-strong);
+  padding-left: 12px;
+  margin: 0;
+}
+.note b { color: var(--ink); font-weight: 600; }
+
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; font-size: 13px; }
+.kv dt { color: var(--ink-3); }
+.kv dd { margin: 0; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- подвал */
+.colophon {
+  border-top: 1px solid var(--line);
+  padding-block: 26px 0;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--ink-3);
+  display: grid;
+  gap: 10px;
+}
+.colophon code {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  background: var(--panel-2);
+  padding: 1px 5px;
+  border-radius: 2px;
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------------ адаптивность */
+@media (max-width: 860px) {
+  .cols, .cols-wide, .board-split { grid-template-columns: minmax(0, 1fr); }
+  .masthead__inner { align-items: flex-start; }
+}
+@media (max-width: 460px) {
+  .readout { grid-template-columns: 1fr 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+</style>
+
+<header class="masthead">
+  <div class="masthead__inner">
+    <div>
+      <p class="masthead__eyebrow">Лабораторная работа № 1 · вариант 12</p>
+      <h1>Нейрон на NumPy, собранный вручную</h1>
+      <p class="masthead__sub">
+        Прямой проход, функции активации, функция потерь и аналитический градиент —
+        без фреймворков автоматического дифференцирования. Страница считает в браузере
+        по тем же формулам и на тех же данных, что и код на NumPy.
+      </p>
+      <div class="chips">
+        <span class="chip">активации <b>tanh + ReLU</b></span>
+        <span class="chip">задача <b>make_circles</b></span>
+        <span class="chip">потери <b>BCE</b></span>
+        <span class="chip">сеть <b>2 → H → 1</b></span>
+      </div>
+    </div>
+    <div class="readout" id="readout">
+      <div class="readout__cell">
+        <span class="readout__k">точность сети</span>
+        <span class="readout__v" id="rd-acc">—</span>
+      </div>
+      <div class="readout__cell">
+        <span class="readout__k">градиент, отн. ошибка</span>
+        <span class="readout__v" id="rd-grad">—</span>
+      </div>
+      <div class="readout__cell">
+        <span class="readout__k">расхождение с NumPy</span>
+        <span class="readout__v" id="rd-numpy">—</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ================================================== 1 -->
+  <section class="station" id="s1">
+    <div class="station__head">
+      <span class="station__num">01</span>
+      <h2>Прямой проход одиночного нейрона</h2>
+    </div>
+    <p class="station__lede">
+      Нейрон — это две операции: взвешенная сумма входов со смещением и поэлементная
+      нелинейность. Двигайте ползунки и следите, как меняются <span class="mono">z</span> и
+      <span class="mono">a</span>.
+    </p>
+    <div class="station__body cols">
+      <div class="panel">
+        <p class="panel__title">параметры и вход</p>
+        <div class="ctrl">
+          <div class="ctrl__row"><label class="ctrl__label" for="s1-w1">вес w₁</label><span class="ctrl__value" id="s1-w1-v">1.20</span></div>
+          <input type="range" id="s1-w1" min="-3" max="3" step="0.05" value="1.2">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><label class="ctrl__label" for="s1-w2">вес w₂</label><span class="ctrl__value" id="s1-w2-v">-0.80</span></div>
+          <input type="range" id="s1-w2" min="-3" max="3" step="0.05" value="-0.8">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><label class="ctrl__label" for="s1-b">смещение b</label><span class="ctrl__value" id="s1-b-v">0.30</span></div>
+          <input type="range" id="s1-b" min="-3" max="3" step="0.05" value="0.3">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><label class="ctrl__label" for="s1-x1">вход x₁</label><span class="ctrl__value" id="s1-x1-v">0.90</span></div>
+          <input type="range" id="s1-x1" min="-3" max="3" step="0.05" value="0.9">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><label class="ctrl__label" for="s1-x2">вход x₂</label><span class="ctrl__value" id="s1-x2-v">-1.40</span></div>
+          <input type="range" id="s1-x2" min="-3" max="3" step="0.05" value="-1.4">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><span class="ctrl__label">активация φ</span></div>
+          <div class="segmented" id="s1-act" role="group" aria-label="Функция активации">
+            <button type="button" data-act="tanh" aria-pressed="true">tanh</button>
+            <button type="button" data-act="relu" aria-pressed="false">ReLU</button>
+            <button type="button" data-act="sigmoid" aria-pressed="false">sigmoid</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <p class="panel__title">пошаговый расчёт</p>
+        <div class="formula">z = w₁·x₁ + w₂·x₂ + b <span class="dim">;</span> a = φ(z)</div>
+        <div class="trace" id="s1-trace" style="margin-top:14px"></div>
+        <div class="figure" style="margin-top:18px">
+          <div class="chart" id="s1-chart"></div>
+          <p class="figure__cap"><span>Положение <span class="mono">z</span> на кривой активации</span></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== 2 -->
+  <section class="station" id="s2">
+    <div class="station__head">
+      <span class="station__num">02</span>
+      <h2>Активации варианта и их производные</h2>
+    </div>
+    <p class="station__lede">
+      Набор варианта 12 — <b>tanh</b> и <b>ReLU</b>. Производная решает, дойдёт ли сигнал
+      ошибки до ранних слоёв: у tanh она гаснет при больших |z|, у ReLU обращается в ноль
+      на всей отрицательной полуоси.
+    </p>
+    <div class="station__body cols-wide">
+      <div class="figure">
+        <div class="chart" id="s2-chart"></div>
+        <div class="legend" id="s2-legend"></div>
+        <p class="figure__cap"><span>Отрезок [−6; 6], как требует ход работы</span></p>
+      </div>
+      <div>
+        <div class="panel">
+          <p class="panel__title">значения в точке</p>
+          <div class="ctrl">
+            <div class="ctrl__row"><label class="ctrl__label" for="s2-z">аргумент z</label><span class="ctrl__value" id="s2-z-v">1.00</span></div>
+            <input type="range" id="s2-z" min="-6" max="6" step="0.05" value="1">
+          </div>
+          <div class="tablewrap">
+            <table>
+              <thead><tr><th>функция</th><th>φ(z)</th><th>φ′(z)</th></tr></thead>
+              <tbody id="s2-table"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="note" style="margin-top:14px">
+          При <b>|z| &gt; 4</b> производная tanh меньше 0.002 — нейрон насыщен и почти не
+          обучается. У ReLU производная либо ровно 1, либо ровно 0: градиент не затухает,
+          но «мёртвый» нейрон не оживает никогда.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== 3 -->
+  <section class="station" id="s3">
+    <div class="station__head">
+      <span class="station__num">03</span>
+      <h2>Функция потерь и её градиент</h2>
+    </div>
+    <p class="station__lede">
+      Вариант 12 использует бинарную кросс-энтропию. Ниже — её значение и производная
+      по выходу нейрона, рядом для сравнения MSE.
+    </p>
+    <div class="station__body cols">
+      <div>
+        <div class="panel">
+          <p class="panel__title">одна точка выборки</p>
+          <div class="ctrl">
+            <div class="ctrl__row"><label class="ctrl__label" for="s3-a">выход a</label><span class="ctrl__value" id="s3-a-v">0.80</span></div>
+            <input type="range" id="s3-a" min="0.005" max="0.995" step="0.005" value="0.8">
+          </div>
+          <div class="ctrl">
+            <div class="ctrl__row"><span class="ctrl__label">истинная метка y</span></div>
+            <div class="segmented" id="s3-y" role="group" aria-label="Истинная метка">
+              <button type="button" data-y="0" aria-pressed="false">y = 0</button>
+              <button type="button" data-y="1" aria-pressed="true">y = 1</button>
+            </div>
+          </div>
+          <dl class="kv" id="s3-kv" style="margin-top:14px"></dl>
+        </div>
+        <p class="note" style="margin-top:14px">
+          Для связки sigmoid + BCE множители <span class="mono">a(1−a)</span> сокращаются, и
+          градиент по <span class="mono">z</span> становится равен
+          <span class="mono">(a − y)/N</span>: он <b>не затухает</b>, когда нейрон уверенно
+          ошибается. С MSE остаётся множитель <span class="mono">φ′(z)</span>, и в зоне
+          насыщения обучение почти останавливается.
+        </p>
+      </div>
+      <div class="figure">
+        <div class="chart" id="s3-chart"></div>
+        <div class="legend" id="s3-legend"></div>
+        <p class="figure__cap"><span>Потери как функция выхода нейрона</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== 4 -->
+  <section class="station" id="s4">
+    <div class="station__head">
+      <span class="station__num">04</span>
+      <h2>Почему одного нейрона не хватает</h2>
+    </div>
+    <p class="station__lede">
+      Одиночный нейрон проводит прямую. На линейно разделимом наборе этого достаточно,
+      на вложенных окружностях — нет: обучение упирается в <span class="mono">ln 2 ≈ 0.6931</span>
+      и точность около 50 %.
+    </p>
+    <div class="station__body cols-wide">
+      <div class="board">
+        <canvas class="board__canvas" id="s4-canvas" width="440" height="440"
+                aria-label="Разделяющая поверхность одиночного нейрона"></canvas>
+        <div class="scale">
+          <span>класс 0</span>
+          <span class="scale__bar" id="s4-scale"></span>
+          <span>класс 1</span>
+        </div>
+      </div>
+      <div>
+        <div class="figure">
+          <div class="chart" id="s4-chart"></div>
+          <p class="figure__cap"><span>Кривая потерь, логарифмическая шкала</span></p>
+        </div>
+        <dl class="kv" id="s4-kv" style="margin-top:16px"></dl>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn--ghost" id="s4-run" type="button">Переобучить заново</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== 5 -->
+  <section class="station" id="s5">
+    <div class="station__head">
+      <span class="station__num">05</span>
+      <h2>Сеть со скрытым слоем: обучение вживую</h2>
+    </div>
+    <p class="station__lede">
+      Скрытый слой строит новое представление, в котором классы становятся линейно
+      разделимыми. Обратное распространение ошибки посчитано вручную — теми же формулами,
+      что в <span class="mono">neuron/mlp.py</span>. Запустите обучение и смотрите, как
+      граница обходит внутреннюю окружность.
+    </p>
+    <div class="station__body cols">
+      <div class="panel">
+        <p class="panel__title">настройки обучения</p>
+        <div class="ctrl">
+          <div class="ctrl__row"><span class="ctrl__label">набор данных</span></div>
+          <div class="segmented" id="s5-data" role="group" aria-label="Набор данных">
+            <button type="button" data-ds="circles" aria-pressed="true">circles</button>
+            <button type="button" data-ds="moons" aria-pressed="false">moons</button>
+            <button type="button" data-ds="xor" aria-pressed="false">XOR</button>
+            <button type="button" data-ds="and_or" aria-pressed="false">AND-OR</button>
+          </div>
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><span class="ctrl__label">активация скрытого слоя</span></div>
+          <div class="segmented" id="s5-act" role="group" aria-label="Активация скрытого слоя">
+            <button type="button" data-act="tanh" aria-pressed="true">tanh</button>
+            <button type="button" data-act="relu" aria-pressed="false">ReLU</button>
+          </div>
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><label class="ctrl__label" for="s5-h">нейронов в слое H</label><span class="ctrl__value" id="s5-h-v">8</span></div>
+          <input type="range" id="s5-h" min="2" max="16" step="1" value="8">
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><span class="ctrl__label">скорость обучения η</span></div>
+          <div class="segmented" id="s5-lr" role="group" aria-label="Скорость обучения">
+            <button type="button" data-lr="0.001" aria-pressed="false">0.001</button>
+            <button type="button" data-lr="0.01" aria-pressed="false">0.01</button>
+            <button type="button" data-lr="0.1" aria-pressed="false">0.1</button>
+            <button type="button" data-lr="1" aria-pressed="true">1.0</button>
+          </div>
+        </div>
+        <div class="ctrl">
+          <div class="ctrl__row"><label class="ctrl__label" for="s5-seed">инициализация (seed)</label><span class="ctrl__value" id="s5-seed-v">3</span></div>
+          <input type="range" id="s5-seed" min="0" max="19" step="1" value="3">
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn" id="s5-play" type="button">Обучать</button>
+          <button class="btn btn--ghost" id="s5-reset" type="button">Сбросить</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="board-split">
+          <div class="board">
+            <canvas class="board__canvas" id="s5-canvas" width="440" height="440"
+                    aria-label="Разделяющая поверхность сети со скрытым слоем"></canvas>
+            <div class="scale">
+              <span>класс 0</span>
+              <span class="scale__bar" id="s5-scale"></span>
+              <span>класс 1</span>
+            </div>
+          </div>
+          <div>
+            <div class="figure">
+              <div class="chart" id="s5-chart"></div>
+              <p class="figure__cap"><span>Потери по эпохам, логарифмическая шкала</span></p>
+            </div>
+            <dl class="kv" id="s5-kv" style="margin-top:16px"></dl>
+          </div>
+        </div>
+        <p class="note" id="s5-note" style="margin-top:18px"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== 6 -->
+  <section class="station" id="s6">
+    <div class="station__head">
+      <span class="station__num">06</span>
+      <h2>Проверка градиента конечными разностями</h2>
+    </div>
+    <p class="station__lede">
+      Каждый параметр сдвигается на ±ε, и центральная разность сравнивается с формулой,
+      выведенной вручную. Требование хода работы — расхождение не больше
+      <span class="mono">1·10⁻⁶</span>. Проверяется текущая сеть из станции 05.
+    </p>
+    <div class="station__body cols-wide">
+      <div>
+        <div class="btn-row" style="margin-bottom:16px">
+          <button class="btn" id="s6-run" type="button">Проверить градиент</button>
+          <button class="btn btn--ghost" id="s6-kink" type="button">Показать излом ReLU</button>
+        </div>
+        <div id="s6-verdict"></div>
+        <dl class="kv" id="s6-kv" style="margin-top:16px"></dl>
+        <p class="note" id="s6-note" style="margin-top:16px"></p>
+      </div>
+      <div class="panel">
+        <p class="panel__title">покомпонентное сравнение</p>
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th>θ</th><th>аналитический</th><th>численный</th><th>отн. ошибка</th></tr>
+            </thead>
+            <tbody id="s6-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================== 7 -->
+  <section class="station" id="s7">
+    <div class="station__head">
+      <span class="station__num">07</span>
+      <h2>Влияние скорости обучения</h2>
+    </div>
+    <p class="station__lede">
+      Четыре значения η из хода работы на одном графике. Сеть, инициализация и данные
+      одинаковы — меняется только длина шага.
+    </p>
+    <div class="station__body cols-wide">
+      <div class="figure">
+        <div class="chart" id="s7-chart"></div>
+        <div class="legend" id="s7-legend"></div>
+        <p class="figure__cap"><span>2000 эпох, набор make_circles</span></p>
+      </div>
+      <div>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th>η</th><th>L в конце</th><th>точность</th><th>эпоха L &lt; 0.1</th></tr></thead>
+            <tbody id="s7-table"></tbody>
+          </table>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn btn--ghost" id="s7-run" type="button">Пересчитать</button>
+        </div>
+        <p class="note" style="margin-top:16px">
+          Слишком малый шаг не успевает сойтись за отведённые эпохи; слишком большой
+          перепрыгивает минимум. Для линейной активации с MSE граница точная:
+          <span class="mono">η &lt; 2/λ<sub>max</sub>(H)</span>, и в отчёте она подтверждена численно.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <p style="margin:0">
+      Страница — интерфейс к лабораторной работе, а не отдельная реализация. Наборы данных
+      выгружены из scikit-learn кодом <code>web/export_data.py</code> и стандартизованы тем же
+      <code>neuron/datasets.py</code>; формулы прямого и обратного прохода перенесены из
+      <code>neuron/mlp.py</code> один в один.
+    </p>
+    <p style="margin:0" id="colophon-verify"></p>
+  </footer>
+</main>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
